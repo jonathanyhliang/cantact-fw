@@ -44,39 +44,20 @@ void can_set_filter(uint32_t id, uint32_t mask) {
 
 void can_enable(void) {
     if (bus_state == OFF_BUS) {
-	// hcan.Init.Prescaler = prescaler;
-	// hcan.Init.Mode = CAN_MODE_NORMAL;
-	// hcan.Init.SJW = CAN_SJW_1TQ;
-	// hcan.Init.BS1 = CAN_BS1_4TQ;
-	// hcan.Init.BS2 = CAN_BS2_3TQ;
-	// hcan.Init.TTCM = DISABLE;
-	// hcan.Init.ABOM = DISABLE;
-	// hcan.Init.AWUM = DISABLE;
-	// hcan.Init.NART = DISABLE;
-	// hcan.Init.RFLM = DISABLE;
-	// hcan.Init.TXFP = DISABLE;
-        hcan1.Instance = CAN1;
-        hcan1.Init.Prescaler = 3;
-        hcan1.Init.Mode = CAN_MODE_NORMAL;
-        hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-        hcan1.Init.TimeSeg1 = CAN_BS1_4TQ;
-        hcan1.Init.TimeSeg2 = CAN_BS2_3TQ;
-        hcan1.Init.TimeTriggeredMode = DISABLE;
-        hcan1.Init.AutoBusOff = DISABLE;
-        hcan1.Init.AutoWakeUp = DISABLE;
-        hcan1.Init.AutoRetransmission = DISABLE;
-        hcan1.Init.ReceiveFifoLocked = DISABLE;
-        hcan1.Init.TransmitFifoPriority = DISABLE;
-        if (HAL_CAN_Init(&hcan1) != HAL_OK)
-        {
-            Error_Handler();
-        }
+	hcan.Init.Prescaler = prescaler;
+	hcan.Init.Mode = CAN_MODE_NORMAL;
+	hcan.Init.SJW = CAN_SJW_1TQ;
+	hcan.Init.BS1 = CAN_BS1_4TQ;
+	hcan.Init.BS2 = CAN_BS2_3TQ;
+	hcan.Init.TTCM = DISABLE;
+	hcan.Init.ABOM = DISABLE;
+	hcan.Init.AWUM = DISABLE;
+	hcan.Init.NART = DISABLE;
+	hcan.Init.RFLM = DISABLE;
+	hcan.Init.TXFP = DISABLE;
 
         hcan.pTxMsg = NULL;
-        // HAL_CAN_Init(&hcan1);
-        if (HAL_CAN_Init(&hcan1) != HAL_OK) {
-            Error_Handler();
-        }
+        HAL_CAN_Init(&hcan1);
         bus_state = ON_BUS;
 	    can_set_filter(0, 0);
     }
@@ -85,7 +66,8 @@ void can_enable(void) {
 void can_disable(void) {
     if (bus_state == ON_BUS) {
         // do a bxCAN reset (set RESET bit to 1)
-        hcan1.Instance->MCR |= CAN_MCR_RESET;
+        // hcan1.Instance->MCR |= CAN_MCR_RESET;
+        HAL_CAN_Stop(&hcan1);
         bus_state = OFF_BUS;
     }
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
