@@ -2,7 +2,7 @@
 // LED: Handles blinking of status light
 //
 
-#include "stm32f0xx_hal.h"
+#include "stm32f4xx_hal.h"
 #include "led.h"
 
 static uint32_t led_laston = 0;

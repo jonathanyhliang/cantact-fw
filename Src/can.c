@@ -1,17 +1,17 @@
-#include "stm32f0xx_hal.h"
+#include "stm32f4xx_hal.h"
 #include "can.h"
 #include "led.h"
 
-CAN_HandleTypeDef hcan;
-CAN_FilterConfTypeDef filter;
+extern CAN_HandleTypeDef hcan1;
+CAN_FilterTypeDef filter;
 uint32_t prescaler;
 enum can_bus_state bus_state;
 
 void can_init(void) {
     // default to 125 kbit/s
     prescaler = 48;
-    hcan.Instance = CAN;
-    bus_state = OFF_BUS;
+    // hcan.Instance = CAN;
+    bus_state = OFF_BUS; 
 }
 
 void can_set_filter(uint32_t id, uint32_t mask) {
@@ -32,40 +32,60 @@ void can_set_filter(uint32_t id, uint32_t mask) {
 
     filter.FilterMode = CAN_FILTERMODE_IDMASK;
     filter.FilterScale = CAN_FILTERSCALE_32BIT;
-    filter.FilterNumber = 0;
+    filter.FilterBank = 0;
     filter.FilterFIFOAssignment = CAN_FIFO0;
-    filter.BankNumber = 0;
+    filter.SlaveStartFilterBank = 0;
     filter.FilterActivation = ENABLE;
 
     if (bus_state == ON_BUS) {
-	HAL_CAN_ConfigFilter(&hcan, &filter);
+	    HAL_CAN_ConfigFilter(&hcan1, &filter);
     }
 }
 
 void can_enable(void) {
     if (bus_state == OFF_BUS) {
-	hcan.Init.Prescaler = prescaler;
-	hcan.Init.Mode = CAN_MODE_NORMAL;
-	hcan.Init.SJW = CAN_SJW_1TQ;
-	hcan.Init.BS1 = CAN_BS1_4TQ;
-	hcan.Init.BS2 = CAN_BS2_3TQ;
-	hcan.Init.TTCM = DISABLE;
-	hcan.Init.ABOM = DISABLE;
-	hcan.Init.AWUM = DISABLE;
-	hcan.Init.NART = DISABLE;
-	hcan.Init.RFLM = DISABLE;
-	hcan.Init.TXFP = DISABLE;
+	// hcan.Init.Prescaler = prescaler;
+	// hcan.Init.Mode = CAN_MODE_NORMAL;
+	// hcan.Init.SJW = CAN_SJW_1TQ;
+	// hcan.Init.BS1 = CAN_BS1_4TQ;
+	// hcan.Init.BS2 = CAN_BS2_3TQ;
+	// hcan.Init.TTCM = DISABLE;
+	// hcan.Init.ABOM = DISABLE;
+	// hcan.Init.AWUM = DISABLE;
+	// hcan.Init.NART = DISABLE;
+	// hcan.Init.RFLM = DISABLE;
+	// hcan.Init.TXFP = DISABLE;
+        hcan1.Instance = CAN1;
+        hcan1.Init.Prescaler = 3;
+        hcan1.Init.Mode = CAN_MODE_NORMAL;
+        hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
+        hcan1.Init.TimeSeg1 = CAN_BS1_4TQ;
+        hcan1.Init.TimeSeg2 = CAN_BS2_3TQ;
+        hcan1.Init.TimeTriggeredMode = DISABLE;
+        hcan1.Init.AutoBusOff = DISABLE;
+        hcan1.Init.AutoWakeUp = DISABLE;
+        hcan1.Init.AutoRetransmission = DISABLE;
+        hcan1.Init.ReceiveFifoLocked = DISABLE;
+        hcan1.Init.TransmitFifoPriority = DISABLE;
+        if (HAL_CAN_Init(&hcan1) != HAL_OK)
+        {
+            Error_Handler();
+        }
+
         hcan.pTxMsg = NULL;
-        HAL_CAN_Init(&hcan);
+        // HAL_CAN_Init(&hcan1);
+        if (HAL_CAN_Init(&hcan1) != HAL_OK) {
+            Error_Handler();
+        }
         bus_state = ON_BUS;
-	can_set_filter(0, 0);
+	    can_set_filter(0, 0);
     }
 }
 
 void can_disable(void) {
     if (bus_state == ON_BUS) {
         // do a bxCAN reset (set RESET bit to 1)
-        hcan.Instance->MCR |= CAN_MCR_RESET;
+        hcan1.Instance->MCR |= CAN_MCR_RESET;
         bus_state = OFF_BUS;
     }
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
@@ -79,31 +99,31 @@ void can_set_bitrate(enum can_bitrate bitrate) {
 
     switch (bitrate) {
     case CAN_BITRATE_10K:
-	prescaler = 600;
+	    prescaler = 300;
         break;
     case CAN_BITRATE_20K:
-	prescaler = 300;
+	    prescaler = 150;
         break;
     case CAN_BITRATE_50K:
-	prescaler = 120;
+	    prescaler = 60;
         break;
     case CAN_BITRATE_100K:
-        prescaler = 60;
+        prescaler = 30;
         break;
     case CAN_BITRATE_125K:
-        prescaler = 48;
-        break;
-    case CAN_BITRATE_250K:
         prescaler = 24;
         break;
-    case CAN_BITRATE_500K:
+    case CAN_BITRATE_250K:
         prescaler = 12;
         break;
+    case CAN_BITRATE_500K:
+        prescaler = 6;
+        break;
     case CAN_BITRATE_750K:
-        prescaler = 8;
+        prescaler = 4;
         break;
     case CAN_BITRATE_1000K:
-        prescaler = 6;
+        prescaler = 3;
         break;
     }
 }
@@ -114,9 +134,9 @@ void can_set_silent(uint8_t silent) {
         return;
     }
     if (silent) {
-        hcan.Init.Mode = CAN_MODE_SILENT;
+        hcan1.Init.Mode = CAN_MODE_SILENT;
     } else {
-        hcan.Init.Mode = CAN_MODE_NORMAL;
+        hcan1.Init.Mode = CAN_MODE_NORMAL;
     }
 }
 
@@ -125,7 +145,7 @@ uint32_t can_tx(CanTxMsgTypeDef *tx_msg, uint32_t timeout) {
 
     // transmit can frame
     hcan.pTxMsg = tx_msg;
-    status = HAL_CAN_Transmit(&hcan, timeout);
+    status = HAL_CAN_Transmit(&hcan1, timeout);
 
 	led_on();
     return status;
@@ -136,7 +156,7 @@ uint32_t can_rx(CanRxMsgTypeDef *rx_msg, uint32_t timeout) {
 
     hcan.pRxMsg = rx_msg;
 
-    status = HAL_CAN_Receive(&hcan, CAN_FIFO0, timeout);
+    status = HAL_CAN_Receive(&hcan1, CAN_FIFO0, timeout);
 
 	led_on();
     return status;
