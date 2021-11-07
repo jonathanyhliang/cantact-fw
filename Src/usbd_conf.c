@@ -47,7 +47,7 @@ void Error_Handler(void);
 void SystemClock_Config(void);
 
 /* USER CODE BEGIN 0 */
-
+__IO uint32_t remotewakeupon=0;
 /* USER CODE END 0 */
 
 /* USER CODE BEGIN PFP */
@@ -262,7 +262,13 @@ void HAL_PCD_ResumeCallback(PCD_HandleTypeDef *hpcd)
 #endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
 {
   /* USER CODE BEGIN 3 */
-
+  if ((hpcd->Init.low_power_enable)&&(remotewakeupon == 0))
+  {
+    SystemClockConfig_Resume();
+    /* Reset SLEEPDEEP bit of Cortex System Control Register */
+    SCB->SCR &= (uint32_t)~((uint32_t)(SCB_SCR_SLEEPDEEP_Msk | SCB_SCR_SLEEPONEXIT_Msk));
+  }
+  remotewakeupon=0;
   /* USER CODE END 3 */
   USBD_LL_Resume((USBD_HandleTypeDef*)hpcd->pData);
 }

@@ -23,6 +23,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "usbd_cdc_if.h"
+#include "can.h"
+#include "slcan.h"
+#include "led.h"
 
 /* USER CODE END Includes */
 
@@ -51,6 +55,7 @@ CAN_HandleTypeDef hcan1;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN1_Init(void);
+static void led_init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -90,17 +95,43 @@ int main(void)
   MX_GPIO_Init();
   MX_USB_DEVICE_Init();
   MX_CAN1_Init();
+  led_init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+    // turn on green LED
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+
+  // blink red LED for test
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+  HAL_Delay(100);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+  HAL_Delay(100);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+  HAL_Delay(100);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+
+  // loop forever
+  CanRxMsgTypeDef rx_msg;
+  uint32_t status;
+  uint8_t msg_buf[SLCAN_MTU];
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    while (!is_can_msg_pending(CAN_RX_FIFO0))
+      led_process();
+    status = can_rx(&rx_msg, 3);
+    if (status == HAL_OK) {
+      status = slcan_parse_frame((uint8_t *)&msg_buf, &rx_msg);
+      CDC_Transmit_FS(msg_buf, status);
+    }
+    led_process();
   }
   /* USER CODE END 3 */
 }
@@ -202,7 +233,15 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+static void led_init() {
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = GPIO_PIN_5;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_MEDIUM;
+    GPIO_InitStruct.Alternate = 0;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+}
 /* USER CODE END 4 */
 
 /**

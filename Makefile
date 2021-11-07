@@ -11,7 +11,7 @@
 BUILD_NUMBER ?= 0
 
 # SOURCES: list of sources in the user application
-SOURCES = main.c usbd_conf.c usbd_cdc_if.c usb_device.c usbd_desc.c stm32f0xx_hal_msp.c stm32f0xx_it.c system_stm32f0xx.c can.c slcan.c led.c
+SOURCES = main.c usbd_conf.c usbd_cdc_if.c usb_device.c usbd_desc.c stm32f4xx_hal_msp.c stm32f4xx_it.c system_stm32f4xx.c can.c slcan.c led.c
 
 # TARGET: name of the user application
 TARGET = CANtact-b$(BUILD_NUMBER)
@@ -20,11 +20,10 @@ TARGET = CANtact-b$(BUILD_NUMBER)
 BUILD_DIR = build
 
 # LD_SCRIPT: location of the linker script
-LD_SCRIPT = STM32F042C6_FLASH.ld
+LD_SCRIPT = STM32F446RETx_FLASH.ld
 
 # USER_DEFS user defined macros
-USER_DEFS = -D HSI48_VALUE=48000000 -D HSE_VALUE=16000000
-USER_DEFS += -D CANTACT_BUILD_NUMBER=$(BUILD_NUMBER)
+USER_DEFS = -D CANTACT_BUILD_NUMBER=$(BUILD_NUMBER)
 # USER_INCLUDES: user defined includes
 USER_INCLUDES =
 
@@ -38,7 +37,7 @@ USER_CFLAGS = -Wall -g -ffunction-sections -fdata-sections -Os
 USER_LDFLAGS = -fno-exceptions -ffunction-sections -fdata-sections -Wl,--gc-sections
 
 # TARGET_DEVICE: device to compile for
-TARGET_DEVICE = STM32F042x6
+TARGET_DEVICE = STM32F446xx
 
 #######################################
 # end of user configuration
@@ -57,17 +56,17 @@ MKDIR = mkdir -p
 
 # core and CPU type for Cortex M0
 # ARM core type (CORE_M0, CORE_M3)
-CORE = CORE_M0
+CORE = CORE_M4
 # ARM CPU type (cortex-m0, cortex-m3)
-CPU = cortex-m0
+CPU = cortex-m4
 
 # where to build STM32Cube
 CUBELIB_BUILD_DIR = $(BUILD_DIR)/STM32Cube
 
 # various paths within the STmicro library
 CMSIS_PATH = Drivers/CMSIS
-CMSIS_DEVICE_PATH = $(CMSIS_PATH)/Device/ST/STM32F0xx
-DRIVER_PATH = Drivers/STM32F0xx_HAL_Driver
+CMSIS_DEVICE_PATH = $(CMSIS_PATH)/Device/ST/STM32F4xx
+DRIVER_PATH = Drivers/STM32F4xx_HAL_Driver
 
 # includes for gcc
 INCLUDES = -I$(CMSIS_PATH)/Include
@@ -143,7 +142,7 @@ $(USB_BUILD_DIR):
 # list of user program objects
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(SOURCES:.c=.o)))
 # add an object for the startup code
-OBJECTS += $(BUILD_DIR)/startup_stm32f042x6.o
+OBJECTS += $(BUILD_DIR)/startup_stm32f446xx.o
 
 # use the periphlib core library, plus generic ones (libc, libm, libnosys)
 LIBS = -lstm32cube -lc -lm -lnosys

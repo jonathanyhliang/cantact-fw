@@ -1,16 +1,21 @@
-#include "stm32f0xx_hal.h"
+#include "stm32f4xx_hal.h"
 #include "can.h"
 #include "led.h"
 
-CAN_HandleTypeDef hcan;
-CAN_FilterConfTypeDef filter;
+// CAN_HandleTypeDef hcan;
+extern CAN_HandleTypeDef hcan1;
+#define hcan hcan1
+// CAN_FilterConfTypeDef filter;
+CAN_FilterTypeDef filter;
 uint32_t prescaler;
 enum can_bus_state bus_state;
+uint32_t TxMailbox;
+extern void Error_Handler(void);
 
 void can_init(void) {
     // default to 125 kbit/s
     prescaler = 48;
-    hcan.Instance = CAN;
+    // hcan.Instance = CAN;
     bus_state = OFF_BUS;
 }
 
@@ -32,9 +37,9 @@ void can_set_filter(uint32_t id, uint32_t mask) {
 
     filter.FilterMode = CAN_FILTERMODE_IDMASK;
     filter.FilterScale = CAN_FILTERSCALE_32BIT;
-    filter.FilterNumber = 0;
-    filter.FilterFIFOAssignment = CAN_FIFO0;
-    filter.BankNumber = 0;
+    filter.FilterBank = 0;
+    filter.FilterFIFOAssignment = CAN_RX_FIFO0;
+    filter.SlaveStartFilterBank = 0;
     filter.FilterActivation = ENABLE;
 
     if (bus_state == ON_BUS) {
@@ -45,18 +50,22 @@ void can_set_filter(uint32_t id, uint32_t mask) {
 void can_enable(void) {
     if (bus_state == OFF_BUS) {
 	hcan.Init.Prescaler = prescaler;
-	hcan.Init.Mode = CAN_MODE_NORMAL;
-	hcan.Init.SJW = CAN_SJW_1TQ;
-	hcan.Init.BS1 = CAN_BS1_4TQ;
-	hcan.Init.BS2 = CAN_BS2_3TQ;
-	hcan.Init.TTCM = DISABLE;
-	hcan.Init.ABOM = DISABLE;
-	hcan.Init.AWUM = DISABLE;
-	hcan.Init.NART = DISABLE;
-	hcan.Init.RFLM = DISABLE;
-	hcan.Init.TXFP = DISABLE;
-        hcan.pTxMsg = NULL;
-        HAL_CAN_Init(&hcan);
+	// hcan.Init.Mode = CAN_MODE_NORMAL;
+	// hcan.Init.SJW = CAN_SJW_1TQ;
+	// hcan.Init.BS1 = CAN_BS1_4TQ;
+	// hcan.Init.BS2 = CAN_BS2_3TQ;
+	// hcan.Init.TTCM = DISABLE;
+	// hcan.Init.ABOM = DISABLE;
+	// hcan.Init.AWUM = DISABLE;
+	// hcan.Init.NART = DISABLE;
+	// hcan.Init.RFLM = DISABLE;
+	// hcan.Init.TXFP = DISABLE;
+        // hcan.pTxMsg = NULL;
+        // HAL_CAN_Init(&hcan);
+        if (HAL_CAN_Init(&hcan1) != HAL_OK)
+        {
+            Error_Handler();
+        }
         bus_state = ON_BUS;
 	can_set_filter(0, 0);
     }
@@ -65,10 +74,11 @@ void can_enable(void) {
 void can_disable(void) {
     if (bus_state == ON_BUS) {
         // do a bxCAN reset (set RESET bit to 1)
-        hcan.Instance->MCR |= CAN_MCR_RESET;
+        // hcan.Instance->MCR |= CAN_MCR_RESET;
+        HAL_CAN_Stop(&hcan);
         bus_state = OFF_BUS;
     }
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
 }
 
 void can_set_bitrate(enum can_bitrate bitrate) {
@@ -122,10 +132,21 @@ void can_set_silent(uint8_t silent) {
 
 uint32_t can_tx(CanTxMsgTypeDef *tx_msg, uint32_t timeout) {
     uint32_t status;
+    CAN_TxHeaderTypeDef header;
 
+    UNUSED(timeout);
+
+    header.StdId = tx_msg->StdId;
+    header.ExtId = tx_msg->ExtId;
+    header.IDE = tx_msg->IDE;
+    header.RTR = tx_msg->RTR;
+    header.DLC = tx_msg->DLC;
+    header.TransmitGlobalTime = DISABLE;
+    
     // transmit can frame
-    hcan.pTxMsg = tx_msg;
-    status = HAL_CAN_Transmit(&hcan, timeout);
+    // hcan.pTxMsg = tx_msg;
+    // status = HAL_CAN_Transmit(&hcan, timeout);
+    status = HAL_CAN_AddTxMessage(&hcan, &header, tx_msg->Data, &TxMailbox);
 
 	led_on();
     return status;
@@ -133,11 +154,18 @@ uint32_t can_tx(CanTxMsgTypeDef *tx_msg, uint32_t timeout) {
 
 uint32_t can_rx(CanRxMsgTypeDef *rx_msg, uint32_t timeout) {
     uint32_t status;
+    CAN_RxHeaderTypeDef header;
 
-    hcan.pRxMsg = rx_msg;
+    UNUSED(timeout);
 
-    status = HAL_CAN_Receive(&hcan, CAN_FIFO0, timeout);
-
+    // status = HAL_CAN_Receive(&hcan, CAN_FIFO0, timeout);
+    status = HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &header, rx_msg->Data);
+    rx_msg->StdId = header.StdId;
+    rx_msg->ExtId = header.ExtId;
+    rx_msg->IDE = header.IDE;
+    rx_msg->RTR = header.RTR;
+    rx_msg->DLC = header.DLC;
+    rx_msg->FMI = header.FilterMatchIndex;
 	led_on();
     return status;
 }
@@ -146,5 +174,5 @@ uint8_t is_can_msg_pending(uint8_t fifo) {
     if (bus_state == OFF_BUS) {
         return 0;
     }
-    return (__HAL_CAN_MSG_PENDING(&hcan, fifo) > 0);
+    return (HAL_CAN_GetRxFifoFillLevel(&hcan, fifo) > 0);
 }
