@@ -264,7 +264,7 @@ void HAL_PCD_ResumeCallback(PCD_HandleTypeDef *hpcd)
   /* USER CODE BEGIN 3 */
   if ((hpcd->Init.low_power_enable)&&(remotewakeupon == 0))
   {
-    SystemClockConfig_Resume();
+    SystemClock_Config();
     /* Reset SLEEPDEEP bit of Cortex System Control Register */
     SCB->SCR &= (uint32_t)~((uint32_t)(SCB_SCR_SLEEPDEEP_Msk | SCB_SCR_SLEEPONEXIT_Msk));
   }
